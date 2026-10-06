@@ -53,18 +53,38 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Speed:" FontWeight="SemiBold"/>
-                    <TextBlock Grid.Row="0" Grid.Column="1">
-                        <Run Text="{Binding Speed, StringFormat='{}{0:F1}'}"/><Run Text=" km/h"/>
-                    </TextBlock>
-                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Rate:" FontWeight="SemiBold" Margin="10,0,0,0"/>
-                    <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding Rate, StringFormat='{}{0:F0}'}" Margin="5,0,0,0"/>
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Width:" FontWeight="SemiBold" Margin="0,4,0,0"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,4,0,0">
-                        <Run Text="{Binding Width, StringFormat='{}{0:F1}'}"/><Run Text=" m"/>
-                    </TextBlock>
-                    <TextBlock Grid.Row="1" Grid.Column="2" Text="Last PGN:" FontWeight="SemiBold" Margin="10,4,0,0"/>
-                    <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding LastPgn}" FontFamily="Consolas" Margin="5,4,0,0"/>
+                    <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                            BorderBrush="LightSteelBlue" BorderThickness="1" Background="#EEF5FB"
+                            CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Speed" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock FontWeight="Bold" FontSize="22" Foreground="DarkSlateBlue"
+                                       Margin="12,0,0,0" VerticalAlignment="Center">
+                                <Run Text="{Binding Speed, StringFormat='{}{0:F1}'}"/><Run Text=" km/h"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2"
+                            BorderBrush="LightSteelBlue" BorderThickness="1" Background="#EEF5FB"
+                            CornerRadius="4" Padding="8,4" Margin="8,0,0,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Rate" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Rate, StringFormat='{}{0:F0}'}"
+                                       FontWeight="Bold" FontSize="24" Foreground="DarkSlateBlue"
+                                       Margin="12,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                            BorderBrush="LightSteelBlue" BorderThickness="1" Background="#EEF5FB"
+                            CornerRadius="4" Padding="8,4" Margin="0,4,8,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Width" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock FontWeight="Bold" FontSize="22" Foreground="DarkSlateBlue"
+                                       Margin="12,0,0,0" VerticalAlignment="Center">
+                                <Run Text="{Binding Width, StringFormat='{}{0:F1}'}"/><Run Text=" m"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
                 </Grid>
                 <StackPanel Margin="0,8,0,0">
                     <TextBlock Text="{Binding GpsStatus}" FontWeight="SemiBold"/>
