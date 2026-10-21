@@ -68,8 +68,8 @@
                             BorderBrush="LightSteelBlue" BorderThickness="1" Background="#EEF5FB"
                             CornerRadius="4" Padding="8,4" Margin="8,0,0,0">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="Rate" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding Rate, StringFormat='{}{0:F0}'}"
+                            <TextBlock Text="Target rate" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding TargetApplicationRateDisplay, Mode=OneWay}"
                                        FontWeight="Bold" FontSize="24" Foreground="DarkSlateBlue"
                                        Margin="12,0,0,0" VerticalAlignment="Center"/>
                         </StackPanel>
@@ -89,8 +89,8 @@
                 <StackPanel Margin="0,8,0,0">
                     <TextBlock Text="{Binding GpsStatus}" FontWeight="SemiBold"/>
                     <TextBlock Text="{Binding GpsCoordinateText}"/>
-                    <TextBlock Text="{Binding CurrentApplicationRate, Mode=OneWay}"
-                               Foreground="DarkSlateBlue"/>
+                    <TextBlock Text="{Binding CurrentApplicationRate, Mode=OneWay}" Foreground="DarkSlateBlue"/>
+                    <TextBlock Text="{Binding Rate, StringFormat='Spreader-reported rate: {0:F0}', Mode=OneWay}"/>
                 </StackPanel>
                 <TextBlock Text="{Binding ConfigText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
             </StackPanel>

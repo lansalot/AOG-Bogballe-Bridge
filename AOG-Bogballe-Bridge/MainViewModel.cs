@@ -201,8 +201,13 @@ namespace AOGBogballeBridge
             {
                 _currentApplicationRate = value;
                 OnPropertyChanged(nameof(CurrentApplicationRate));
+                OnPropertyChanged(nameof(TargetApplicationRateDisplay));
             }
         }
+
+        public string TargetApplicationRateDisplay => !ShapefileLoaded
+            ? "Off"
+            : _currentApplicationRate ?? "—";
 
         public string ShapefileName
         {
