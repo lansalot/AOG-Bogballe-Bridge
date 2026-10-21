@@ -23,6 +23,8 @@ The window shows:
 - The machine configuration received from AgOpenGPS
 - The on/off state of each section
 
+Select **Minimal display** to switch to a fixed 400 px wide, 50 px high, always-on-top status bar showing speed, width, and target rate when shapefile rate control is active. It initially appears centered on the primary screen. Drag the bar to reposition it; its position is saved in the current user's registry and restored the next time minimal display is selected. Select **Full window** or press **Esc** to return to the normal display.
+
 The COM port and machine configuration are saved automatically in your Windows user profile, so there is no config file to edit.
 
 If communication with AgIO is lost for more than 1.5 seconds, the Bridge turns off spreading (speed 0, all sections off) until data returns.
