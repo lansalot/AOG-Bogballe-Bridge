@@ -1,2 +1,0 @@
-dotnet publish AOG-Bogballe-Bridge/AOG-Bogballe-Bridge.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None
-Compress-Archive -DestinationPath AOG-Bogballe-Bridge.zip -path  ".\AOG-Bogballe-Bridge\bin\Release\net10.0-windows\win-x64\publish\*" -force
