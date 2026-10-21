@@ -155,11 +155,13 @@
       <Grid x:Name="MinimalLayout" Visibility="Collapsed" Background="#FF202830" Margin="4"
             MouseLeftButtonDown="MinimalLayout_MouseLeftButtonDown" Cursor="SizeAll"
             ToolTip="Drag to reposition">
+          <Grid.LayoutTransform>
+              <ScaleTransform ScaleX="3" ScaleY="3"/>
+          </Grid.LayoutTransform>
           <Grid.ColumnDefinitions>
               <ColumnDefinition Width="Auto"/>
               <ColumnDefinition Width="Auto"/>
               <ColumnDefinition Width="Auto"/>
-              <ColumnDefinition Width="*"/>
               <ColumnDefinition Width="Auto"/>
           </Grid.ColumnDefinitions>
           <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,24,0">
@@ -180,8 +182,16 @@
               <TextBlock Text="{Binding TargetApplicationRateDisplay, Mode=OneWay}"
                          Margin="8,0,0,0" Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center"/>
           </StackPanel>
-          <Button Grid.Column="4" Content="Full window" Click="ShowFullDisplay" Padding="12,6"
-                  VerticalAlignment="Center" Margin="12,0,4,0" ToolTip="Return to the full window (Esc)"/>
+          <Button Grid.Column="3" Click="ShowFullDisplay" Padding="12,6"
+                  VerticalAlignment="Center" Margin="12,0,4,0" ToolTip="Return to the full window (Esc)"
+                  AutomationProperties.Name="Return to full window">
+              <Viewbox Width="16" Height="16" Stretch="Uniform">
+                  <Canvas Width="24" Height="24">
+                      <Path Data="M 9,3 H 3 V 9 M 15,3 H 21 V 9 M 21,15 V 21 H 15 M 9,21 H 3 V 15"
+                            Stroke="Black" StrokeThickness="2" StrokeStartLineCap="Square" StrokeEndLineCap="Square"/>
+                  </Canvas>
+              </Viewbox>
+          </Button>
       </Grid>
     </Grid>
 </Window>

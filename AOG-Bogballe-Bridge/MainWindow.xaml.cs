@@ -10,7 +10,6 @@ namespace AOGBogballeBridge
     public partial class MainWindow : Window
     {
         private const string MinimalPositionRegistryPath = @"Software\AOGBogballeBridge";
-        private const double MinimalWidth = 450;
         private Rect _restoreBounds;
         private WindowState _restoreState;
         private WindowStyle _restoreStyle;
@@ -43,11 +42,6 @@ namespace AOGBogballeBridge
                     {
                         value.FontSize = 17;
                         value.Margin = new Thickness(4, 0, 0, 0);
-                        if (column == 2)
-                        {
-                            value.MaxWidth = 48;
-                            value.TextTrimming = TextTrimming.CharacterEllipsis;
-                        }
                     }
                 }
                 else if (element is Button button)
@@ -78,9 +72,7 @@ namespace AOGBogballeBridge
             Topmost = true;
             MinWidth = 0;
             MinHeight = 0;
-            SizeToContent = SizeToContent.Manual;
-            Width = MinimalWidth;
-            Height = 50;
+            SizeToContent = SizeToContent.WidthAndHeight;
             FullLayout.Visibility = Visibility.Collapsed;
             MinimalLayout.Visibility = Visibility.Visible;
 
