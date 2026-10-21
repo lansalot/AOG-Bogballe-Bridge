@@ -89,6 +89,13 @@ To produce the self-contained single-file exe used for releases:
 dotnet publish AOG-Bogballe-Bridge/AOG-Bogballe-Bridge.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None
 ```
 
+To create a GitHub release, update the project version in `AOG-Bogballe-Bridge/AOG-Bogballe-Bridge.csproj`, create a matching `vX.X.X` tag, and push it. The release workflow builds the self-contained Windows app and attaches `AOG-Bogballe-Bridge-vX.X.X-win-x64.zip` to the generated release.
+
+```
+git tag vX.X.X
+git push origin vX.X.X
+```
+
 ## Legacy Python version
 
 The original Python console script (`main.py`, `config.ini`, the `Development` folder and `AgOpenGPS Bogballe Bridge.exe`) is still in the repository for reference, but is no longer maintained. Please use the v2.0.0+ release instead.
