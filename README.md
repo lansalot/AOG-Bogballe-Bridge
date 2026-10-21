@@ -89,7 +89,7 @@ To produce the self-contained single-file exe used for releases:
 dotnet publish AOG-Bogballe-Bridge/AOG-Bogballe-Bridge.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None
 ```
 
-To create a GitHub release, update the project version in `AOG-Bogballe-Bridge/AOG-Bogballe-Bridge.csproj`, create a matching `vX.X.X` tag, and push it. The release workflow builds the self-contained Windows app and attaches `AOG-Bogballe-Bridge-vX.X.X-win-x64.zip` to the generated release.
+To create a GitHub release, create and push any Git tag. The release workflow builds the current source and attaches a self-contained Windows app archive named for the tag, such as `AOG-Bogballe-Bridge-v2.0.0-win-x64.zip`.
 
 ```
 git tag vX.X.X
