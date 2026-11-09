@@ -16,161 +16,176 @@
     </Window.Resources>
 
     <Grid>
-      <Grid x:Name="FullLayout" Margin="16" >
+      <Grid x:Name="FullLayout" Margin="16">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="1.1*"/>
-            <ColumnDefinition Width="1.4*"/>
-        </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" Margin="0,0,12,0" Padding="12"
+        <Border Grid.Row="0" Padding="12" Margin="0,0,0,10"
                 BorderBrush="LightGray" BorderThickness="1" CornerRadius="4">
-            <StackPanel>
-                <DockPanel LastChildFill="True">
-                    <Button DockPanel.Dock="Right" Content="Minimal display" Click="ShowMinimalDisplay"
-                            Padding="10,4" Margin="8,0,0,0"/>
-                    <TextBlock Text="Connection and live data" FontWeight="Bold" FontSize="15"
-                               VerticalAlignment="Center"/>
-                </DockPanel>
-                <TextBlock Text="COM port or simulator" FontWeight="SemiBold" Margin="0,10,0,3"/>
-                <DockPanel>
-                    <Button DockPanel.Dock="Right" Content="Refresh"
-                            Command="{Binding RefreshPortsCommand}" Margin="8,0,0,0" Padding="10,3"/>
-                    <ComboBox ItemsSource="{Binding AvailablePorts}" SelectedItem="{Binding SelectedPort}"/>
-                </DockPanel>
-                <TextBlock Text="Application-rate command format" FontWeight="SemiBold" Margin="0,10,0,3"/>
-                <ComboBox ItemsSource="{Binding RateCommandModes}"
-                          SelectedItem="{Binding SelectedRateCommandMode, UpdateSourceTrigger=PropertyChanged}"/>
-                <TextBlock Text="UNIQ fallback is optional; keep AppRat selected for ZURF."
-                           FontSize="11" Foreground="DimGray" Margin="0,4,0,0"/>
-                <Grid Margin="0,10,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.1*"/>
+                    <ColumnDefinition Width="1.3*"/>
+                    <ColumnDefinition Width="1.6*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                    <DockPanel LastChildFill="True">
+                        <Button DockPanel.Dock="Right" Content="Minimal display" Click="ShowMinimalDisplay"
+                                Padding="10,4" Margin="8,0,0,0"/>
+                        <TextBlock Text="Connection" FontWeight="Bold" FontSize="15"
+                                   VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <TextBlock Text="COM port or simulator" FontWeight="SemiBold" Margin="0,8,0,3"/>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Refresh"
+                                Command="{Binding RefreshPortsCommand}" Margin="8,0,0,0" Padding="10,3"/>
+                        <ComboBox ItemsSource="{Binding AvailablePorts}" SelectedItem="{Binding SelectedPort}"/>
+                    </DockPanel>
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="UDP" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <Ellipse Grid.Column="1" Width="13" Height="13" Fill="{Binding UdpBrush}"
+                                 Margin="6,0,16,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="{Binding ConnectionOutputLabel}" FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                        <Ellipse Grid.Column="3" Width="13" Height="13" Fill="{Binding SerialBrush}"
+                                 Margin="6,0,0,0" VerticalAlignment="Center"
+                                 ToolTip="Blue indicates the virtual calibrator; no serial device is used."/>
+                    </Grid>
+                    <TextBlock Text="{Binding SimulatorStatus}"
+                               Visibility="{Binding IsSimulatorMode, Converter={StaticResource BooleanToVisibilityConverter}}"
+                               TextWrapping="Wrap" FontSize="11" Foreground="DimGray" Margin="0,6,0,0"/>
+                </StackPanel>
+
+                <Grid Grid.Column="1" Margin="0,0,12,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="UDP:" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <Ellipse Grid.Column="1" Width="16" Height="16" Fill="{Binding UdpBrush}" HorizontalAlignment="Left" Margin="8,0"/>
-                    <TextBlock Grid.Column="2" Text="{Binding ConnectionOutputLabel}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <Ellipse Grid.Column="3" Width="16" Height="16" Fill="{Binding SerialBrush}" HorizontalAlignment="Left" Margin="8,0"
-                             ToolTip="Blue indicates the virtual calibrator; no serial device is used."/>
-                </Grid>
-                <TextBlock Text="{Binding SimulatorStatus}" Visibility="{Binding IsSimulatorMode, Converter={StaticResource BooleanToVisibilityConverter}}"
-                           TextWrapping="Wrap" FontSize="11" Foreground="DimGray" Margin="0,6,0,0"/>
-                <Grid Margin="0,10,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
-                            BorderBrush="LightSteelBlue" BorderThickness="1" Background="#EEF5FB"
-                            CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
+                    <Border Grid.Row="0" Grid.Column="0" BorderBrush="LightSteelBlue" BorderThickness="1"
+                            Background="#EEF5FB" CornerRadius="4" Padding="8,4" Margin="0,0,4,4">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="Speed" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
-                            <TextBlock FontWeight="Bold" FontSize="22" Foreground="DarkSlateBlue"
-                                       Margin="12,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="Speed" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock FontWeight="Bold" FontSize="20" Foreground="DarkSlateBlue"
+                                       Margin="8,0,0,0" VerticalAlignment="Center">
                                 <Run Text="{Binding Speed, StringFormat='{}{0:F1}'}"/><Run Text=" km/h"/>
                             </TextBlock>
                         </StackPanel>
                     </Border>
-                    <Border Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2"
-                            BorderBrush="LightSteelBlue" BorderThickness="1" Background="#EEF5FB"
-                            CornerRadius="4" Padding="8,4" Margin="8,0,0,0">
+                    <Border Grid.Row="0" Grid.Column="1" BorderBrush="LightSteelBlue" BorderThickness="1"
+                            Background="#EEF5FB" CornerRadius="4" Padding="8,4" Margin="4,0,0,4">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="Target rate" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding TargetApplicationRateDisplay, Mode=OneWay}"
-                                       FontWeight="Bold" FontSize="24" Foreground="DarkSlateBlue"
-                                       Margin="12,0,0,0" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                            BorderBrush="LightSteelBlue" BorderThickness="1" Background="#EEF5FB"
-                            CornerRadius="4" Padding="8,4" Margin="0,4,8,0">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="Width" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
-                            <TextBlock FontWeight="Bold" FontSize="22" Foreground="DarkSlateBlue"
-                                       Margin="12,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="Width" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock FontWeight="Bold" FontSize="20" Foreground="DarkSlateBlue"
+                                       Margin="8,0,0,0" VerticalAlignment="Center">
                                 <Run Text="{Binding Width, StringFormat='{}{0:F1}'}"/><Run Text=" m"/>
                             </TextBlock>
                         </StackPanel>
                     </Border>
+                    <Border Grid.Row="1" Grid.Column="0" BorderBrush="LightSteelBlue" BorderThickness="1"
+                            Background="#EEF5FB" CornerRadius="4" Padding="8,4" Margin="0,4,4,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Target rate" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding TargetApplicationRateDisplay, Mode=OneWay}"
+                                       FontWeight="Bold" FontSize="20" Foreground="DarkSlateBlue"
+                                       Margin="8,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Row="1" Grid.Column="1" BorderBrush="LightSteelBlue" BorderThickness="1"
+                            Background="#EEF5FB" CornerRadius="4" Padding="8,4" Margin="4,4,0,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="AOG rate" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"
+                                       ToolTip="Value from AgOpenGPS PGN 0xE7, not a measured spreader value."/>
+                            <TextBlock Text="{Binding Rate, StringFormat='{}{0:F2} kg/ha', Mode=OneWay}"
+                                       FontWeight="Bold" FontSize="18" Foreground="DarkSlateBlue"
+                                       Margin="8,0,0,0" VerticalAlignment="Center"
+                                       ToolTip="Value from AgOpenGPS PGN 0xE7, not a measured spreader value."/>
+                        </StackPanel>
+                    </Border>
                 </Grid>
-                <StackPanel Margin="0,8,0,0">
-                    <TextBlock Text="{Binding GpsStatus}" FontWeight="SemiBold"/>
+
+                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                    <TextBlock Text="Live data" FontWeight="Bold" FontSize="15" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding GpsStatus}" FontWeight="SemiBold" TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding GpsCoordinateText}"/>
-                    <TextBlock Text="{Binding CurrentApplicationRate, Mode=OneWay}" Foreground="DarkSlateBlue"/>
-                    <TextBlock Text="{Binding Rate, StringFormat='Spreader-reported rate: {0:F0}', Mode=OneWay}"/>
-                    <TextBlock Text="Last serial command written (not an acknowledgement):" FontWeight="SemiBold" Margin="0,8,0,0"/>
-                    <TextBlock Text="{Binding LastSpreaderCommand}" TextWrapping="Wrap" FontFamily="Consolas"/>
-                    <TextBlock Text="Last application-rate command written:" FontWeight="SemiBold" Margin="0,4,0,0"/>
-                    <TextBlock Text="{Binding LastApplicationRateCommand}" TextWrapping="Wrap" FontFamily="Consolas"/>
-                    <TextBlock Text="{Binding RateProtocolStatus}" TextWrapping="Wrap" FontSize="11" Foreground="DimGray"/>
+                    <TextBlock Text="{Binding RateProtocolStatus}" TextWrapping="Wrap"
+                               FontSize="11" Foreground="DimGray" Margin="0,3,0,0"/>
+                    <TextBlock Text="{Binding ConfigText}" TextWrapping="Wrap" Margin="0,3,0,0"/>
                 </StackPanel>
-                <TextBlock Text="{Binding ConfigText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
-            </StackPanel>
+            </Grid>
         </Border>
 
-        <Border Grid.Row="0" Grid.Column="1" Margin="0,0,0,12" Padding="12"
+        <Border Grid.Row="1" Padding="12" Margin="0,0,0,10"
                 BorderBrush="LightGray" BorderThickness="1" CornerRadius="4">
-            <StackPanel>
-                <TextBlock Text="Sections" FontWeight="Bold" FontSize="15"/>
-                <ItemsControl ItemsSource="{Binding Sections}" Margin="0,10,0,0">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Sections" FontWeight="Bold" FontSize="14"/>
+                <ItemsControl ItemsSource="{Binding Sections}" Margin="0,6,0,0">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate><UniformGrid Rows="1" Columns="8"/></ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Margin="3" Height="28" BorderBrush="DarkGray" BorderThickness="1"
+                            <Border Margin="3" Height="24" BorderBrush="DarkGray" BorderThickness="1"
                                     CornerRadius="3" Background="{Binding}"/>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-            </StackPanel>
+            </DockPanel>
         </Border>
 
-        <Border Grid.Row="1" Grid.Column="1" Padding="12"
-                BorderBrush="LightGray" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
+        <Border Grid.Row="2" Padding="12" BorderBrush="LightGray" BorderThickness="1"
+                CornerRadius="4" ClipToBounds="True">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <StackPanel Grid.Row="0" Margin="0,0,0,8">
-                    <TextBlock Text="Variable-rate shapefile" FontWeight="Bold" FontSize="15"/>
-                    <DockPanel Margin="0,8,0,0">
-                        <Button DockPanel.Dock="Right" Content="Load shapefile..."
-                                Command="{Binding LoadShapefileCommand}" Padding="12,5" Margin="8,0,0,0"/>
-                        <TextBlock Text="{Binding ShapefileName}" FontWeight="SemiBold"
-                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
-                    </DockPanel>
-                    <DockPanel Margin="0,8,0,0">
-                        <TextBlock DockPanel.Dock="Left" Text="DBF field to preview"
-                                   Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <ComboBox ItemsSource="{Binding ShapefileFields}"
-                                  SelectedItem="{Binding SelectedShapefileField}"/>
-                    </DockPanel>
-                    <TextBlock Text="Numeric fields shade features from low (blue) to high (red)."
-                               FontSize="11" Foreground="DimGray" Margin="0,5,0,0"/>
-                    <TextBlock Text="{Binding ShapefileStatus}" TextWrapping="Wrap" Margin="0,6,0,0"/>
-                </StackPanel>
-                <Border Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" CornerRadius="4">
-                    <local:ShapefileMap Features="{Binding ShapefileFeatures, Mode=OneWay}"
-                                        ValueField="{Binding SelectedShapefileField, Mode=OneWay}"
-                                        IsGeographic="{Binding IsShapefileGeographic, Mode=OneWay}"
-                                        GpsPositionValid="{Binding GpsPositionValid, Mode=OneWay}"
-                                        GpsLatitude="{Binding GpsLatitude, Mode=OneWay}"
-                                        GpsLongitude="{Binding GpsLongitude, Mode=OneWay}"/>
-                </Border>
+                <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="220"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Variable-rate map" FontWeight="Bold" FontSize="15"
+                               VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <TextBlock Grid.Column="1" Text="{Binding ShapefileName}" FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="2" Text="DBF field" Margin="12,0,6,0" VerticalAlignment="Center"/>
+                    <ComboBox Grid.Column="3" ItemsSource="{Binding ShapefileFields}"
+                              SelectedItem="{Binding SelectedShapefileField}"/>
+                    <Button Grid.Column="4" Content="Load shapefile..."
+                            Command="{Binding LoadShapefileCommand}" Padding="12,5" Margin="8,0,0,0"/>
+                </Grid>
+                <Grid Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="{Binding ShapefileStatus}" TextWrapping="Wrap"
+                               FontSize="11" Foreground="DimGray" Margin="0,0,0,5"/>
+                    <Border Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" CornerRadius="4">
+                        <local:ShapefileMap Features="{Binding ShapefileFeatures, Mode=OneWay}"
+                                            ValueField="{Binding SelectedShapefileField, Mode=OneWay}"
+                                            IsGeographic="{Binding IsShapefileGeographic, Mode=OneWay}"
+                                            GpsPositionValid="{Binding GpsPositionValid, Mode=OneWay}"
+                                            GpsLatitude="{Binding GpsLatitude, Mode=OneWay}"
+                                            GpsLongitude="{Binding GpsLongitude, Mode=OneWay}"/>
+                    </Border>
+                </Grid>
             </Grid>
         </Border>
       </Grid>

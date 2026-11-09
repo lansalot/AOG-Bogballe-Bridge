@@ -16,14 +16,14 @@ You will need a USB -> RS232 adapter and null modem cable to connect to the port
 
 The simulator option waits for live AgOpenGPS UDP traffic on port `8888`, processes it through the same bridge logic, and shows the virtual calibrator's latest received command. It does not generate mock data or send anything to a serial port. Its blue status light distinguishes it from a physical COM connection.
 
-Choose the application-rate command format for the calibrator. **AppRat (new format)** sends the colon-separated command. **UNIQ legacy (integer kg/ha)** sends the fixed-width application-rate command documented for UNIQ; rates are rounded to the nearest whole kg/ha in this mode. **AppRat + UNIQ fallback (UNIQ only)** sends AppRat, waits up to one second for a checksum-valid acknowledgement with the requested value, and sends the matching legacy command only if no acknowledgement arrives. Legacy rates through 9999 use `SD` with at least three digits; rates from 10000 through 99999 use `sD` with five digits, as specified by the protocol. Leave fallback off for ZURF unless you specifically intend to use the UNIQ fallback. The selection is saved automatically.
+Application rates always use AppRat first. The Bridge waits up to one second for a checksum-valid acknowledgement with the requested value, then sends the matching UNIQ legacy command only if no acknowledgement arrives. Legacy rates through 9999 use `SD` with at least three digits; rates from 10000 through 99999 use `sD` with five digits, as specified by the protocol. Values above 99999 kg/ha cannot use the legacy fallback. This fixed fallback behavior is intended for UNIQ calibrators: any device that does not acknowledge AppRat will receive the legacy command.
 
 Note that the Bridge will only accept machine configurations with 2, 4 or 8 sections.
 
 The window shows:
 
 - **UDP** status light - green when data is arriving from AgIO; the output light is green for an open COM port and blue for the virtual simulator
-- Live speed, rate and width, and the last PGN received
+- Live speed, width, target application rate and AOG-reported rate from PGN 0xE7 (this is not measured spreader feedback)
 - The machine configuration received from AgOpenGPS
 - The on/off state of each section
 

@@ -37,18 +37,6 @@ namespace AOGBogballeBridge.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("AppRat")]
-        public string RateCommandMode {
-            get {
-                return ((string)(this["RateCommandMode"]));
-            }
-            set {
-                this["RateCommandMode"] = value;
-            }
-        }
-
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
         public int SecNum {
             get {
