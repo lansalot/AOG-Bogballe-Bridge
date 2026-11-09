@@ -22,12 +22,11 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="1.25*"/>
-            <ColumnDefinition Width="0.8*"/>
-            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition Width="1.1*"/>
+            <ColumnDefinition Width="1.4*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Grid.Column="0" Margin="0,0,8,12" Padding="12"
+        <Border Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" Margin="0,0,12,0" Padding="12"
                 BorderBrush="LightGray" BorderThickness="1" CornerRadius="4">
             <StackPanel>
                 <DockPanel LastChildFill="True">
@@ -108,13 +107,13 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="0" Grid.Column="1" Margin="0,0,8,12" Padding="12"
+        <Border Grid.Row="0" Grid.Column="1" Margin="0,0,0,12" Padding="12"
                 BorderBrush="LightGray" BorderThickness="1" CornerRadius="4">
             <StackPanel>
                 <TextBlock Text="Sections" FontWeight="Bold" FontSize="15"/>
                 <ItemsControl ItemsSource="{Binding Sections}" Margin="0,10,0,0">
                     <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><UniformGrid Rows="2" Columns="4"/></ItemsPanelTemplate>
+                        <ItemsPanelTemplate><UniformGrid Rows="1" Columns="8"/></ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
@@ -126,29 +125,40 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="0" Grid.Column="2" Margin="0,0,0,12" Padding="12"
-                BorderBrush="LightGray" BorderThickness="1" CornerRadius="4">
-            <StackPanel>
-                <TextBlock Text="Variable-rate shapefile" FontWeight="Bold" FontSize="15"/>
-                <Button Content="Load shapefile..." Command="{Binding LoadShapefileCommand}"
-                        HorizontalAlignment="Left" Padding="12,5" Margin="0,10,0,6"/>
-                <TextBlock Text="{Binding ShapefileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                <TextBlock Text="DBF field to preview" Margin="0,8,0,3"/>
-                <ComboBox ItemsSource="{Binding ShapefileFields}" SelectedItem="{Binding SelectedShapefileField}"/>
-                <TextBlock Text="Numeric fields shade features from low (blue) to high (red)."
-                           FontSize="11" Foreground="DimGray" Margin="0,5,0,0"/>
-                <TextBlock Text="{Binding ShapefileStatus}" TextWrapping="Wrap" Margin="0,8,0,0"/>
-            </StackPanel>
-        </Border>
-
-        <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
-                BorderBrush="DarkGray" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
-            <local:ShapefileMap Features="{Binding ShapefileFeatures, Mode=OneWay}"
-                                ValueField="{Binding SelectedShapefileField, Mode=OneWay}"
-                                IsGeographic="{Binding IsShapefileGeographic, Mode=OneWay}"
-                                GpsPositionValid="{Binding GpsPositionValid, Mode=OneWay}"
-                                GpsLatitude="{Binding GpsLatitude, Mode=OneWay}"
-                                GpsLongitude="{Binding GpsLongitude, Mode=OneWay}"/>
+        <Border Grid.Row="1" Grid.Column="1" Padding="12"
+                BorderBrush="LightGray" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                    <TextBlock Text="Variable-rate shapefile" FontWeight="Bold" FontSize="15"/>
+                    <DockPanel Margin="0,8,0,0">
+                        <Button DockPanel.Dock="Right" Content="Load shapefile..."
+                                Command="{Binding LoadShapefileCommand}" Padding="12,5" Margin="8,0,0,0"/>
+                        <TextBlock Text="{Binding ShapefileName}" FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <DockPanel Margin="0,8,0,0">
+                        <TextBlock DockPanel.Dock="Left" Text="DBF field to preview"
+                                   Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <ComboBox ItemsSource="{Binding ShapefileFields}"
+                                  SelectedItem="{Binding SelectedShapefileField}"/>
+                    </DockPanel>
+                    <TextBlock Text="Numeric fields shade features from low (blue) to high (red)."
+                               FontSize="11" Foreground="DimGray" Margin="0,5,0,0"/>
+                    <TextBlock Text="{Binding ShapefileStatus}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                </StackPanel>
+                <Border Grid.Row="1" BorderBrush="DarkGray" BorderThickness="1" CornerRadius="4">
+                    <local:ShapefileMap Features="{Binding ShapefileFeatures, Mode=OneWay}"
+                                        ValueField="{Binding SelectedShapefileField, Mode=OneWay}"
+                                        IsGeographic="{Binding IsShapefileGeographic, Mode=OneWay}"
+                                        GpsPositionValid="{Binding GpsPositionValid, Mode=OneWay}"
+                                        GpsLatitude="{Binding GpsLatitude, Mode=OneWay}"
+                                        GpsLongitude="{Binding GpsLongitude, Mode=OneWay}"/>
+                </Border>
+            </Grid>
         </Border>
       </Grid>
 
