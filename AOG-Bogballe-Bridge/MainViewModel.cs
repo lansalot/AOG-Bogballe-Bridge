@@ -258,7 +258,7 @@ namespace AOGBogballeBridge
 
         public string SimulatorStatus => UdpConnected
             ? $"Live AOG traffic; virtual calibrator command: {_simulatorOutput}"
-            : "Waiting for live AOG UDP traffic on port 8888.";
+            : "Waiting for live AOG UDP traffic on port 8888; no data is generated.";
 
         public double Speed
         {
