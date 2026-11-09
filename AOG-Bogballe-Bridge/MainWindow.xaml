@@ -44,6 +44,8 @@
                 <TextBlock Text="Application-rate command format" FontWeight="SemiBold" Margin="0,10,0,3"/>
                 <ComboBox ItemsSource="{Binding RateCommandModes}"
                           SelectedItem="{Binding SelectedRateCommandMode, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Text="UNIQ fallback is optional; keep AppRat selected for ZURF."
+                           FontSize="11" Foreground="DimGray" Margin="0,4,0,0"/>
                 <Grid Margin="0,10,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -112,6 +114,7 @@
                     <TextBlock Text="{Binding LastSpreaderCommand}" TextWrapping="Wrap" FontFamily="Consolas"/>
                     <TextBlock Text="Last application-rate command written:" FontWeight="SemiBold" Margin="0,4,0,0"/>
                     <TextBlock Text="{Binding LastApplicationRateCommand}" TextWrapping="Wrap" FontFamily="Consolas"/>
+                    <TextBlock Text="{Binding RateProtocolStatus}" TextWrapping="Wrap" FontSize="11" Foreground="DimGray"/>
                 </StackPanel>
                 <TextBlock Text="{Binding ConfigText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
             </StackPanel>

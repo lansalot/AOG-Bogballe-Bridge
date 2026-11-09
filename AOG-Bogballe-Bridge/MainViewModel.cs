@@ -23,6 +23,7 @@ namespace AOGBogballeBridge
         private const string SimulatorPort = "AOG Simulator (UDP)";
         private const string AppRatMode = "AppRat (new format)";
         private const string UniqLegacyMode = "UNIQ legacy (integer kg/ha)";
+        private const string AppRatWithUniqFallbackMode = "AppRat + UNIQ fallback (UNIQ only)";
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -64,6 +65,11 @@ namespace AOGBogballeBridge
         private string _simulatorOutput = "No Bogballe command received yet.";
         private string _lastSpreaderCommand = "No serial command written yet.";
         private string _lastApplicationRateCommand = "No application-rate command written yet.";
+        private string _rateProtocolStatus = "No rate command pending.";
+        private readonly object _serialReceiveLock = new();
+        private string _serialReceiveBuffer = string.Empty;
+        private string? _pendingFallbackRate;
+        private string? _pendingFallbackCommand;
 
         // Machine configuration received from AgOpenGPS (PGN 0xEB)
         private int _secNum;
@@ -77,6 +83,7 @@ namespace AOGBogballeBridge
         private UdpClient? _udp;
         private SerialPort? _serial;
         private readonly DispatcherTimer _statusTimer;
+        private readonly DispatcherTimer _rateCommandAckTimer;
         private readonly Dispatcher _dispatcher;
 
         public ICommand RefreshPortsCommand { get; }
@@ -266,8 +273,16 @@ namespace AOGBogballeBridge
                 if (string.Equals(_selectedRateCommandMode, value, StringComparison.Ordinal))
                     return;
 
+                if (!RateCommandModes.Contains(value))
+                    throw new ArgumentException("The selected rate command mode is not supported.", nameof(value));
+
+                _rateCommandAckTimer.Stop();
+                _pendingFallbackRate = null;
+                _pendingFallbackCommand = null;
                 _selectedRateCommandMode = value;
-                Properties.Settings.Default.RateCommandMode = value == UniqLegacyMode ? "UniqLegacy" : "AppRat";
+                Properties.Settings.Default.RateCommandMode = value == UniqLegacyMode
+                    ? "UniqLegacy"
+                    : value == AppRatWithUniqFallbackMode ? "AppRatWithUniqFallback" : "AppRat";
                 Properties.Settings.Default.Save();
                 OnPropertyChanged(nameof(SelectedRateCommandMode));
                 _lastSentApplicationRate = null;
@@ -376,6 +391,16 @@ namespace AOGBogballeBridge
             }
         }
 
+        public string RateProtocolStatus
+        {
+            get => _rateProtocolStatus;
+            private set
+            {
+                _rateProtocolStatus = value;
+                OnPropertyChanged(nameof(RateProtocolStatus));
+            }
+        }
+
         public Brush UdpBrush => UdpConnected ? Brushes.LimeGreen : Brushes.Red;
         public Brush SerialBrush => IsSimulatorMode
             ? Brushes.DodgerBlue
@@ -384,14 +409,27 @@ namespace AOGBogballeBridge
         public MainViewModel()
         {
             _dispatcher = Application.Current.Dispatcher;
+            _rateCommandAckTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _rateCommandAckTimer.Tick += RateCommandAckTimer_Tick;
 
             AvailablePorts = new ObservableCollection<string> { SimulatorPort };
             foreach (string port in SerialPort.GetPortNames())
                 AvailablePorts.Add(port);
-            RateCommandModes = new ObservableCollection<string> { AppRatMode, UniqLegacyMode };
-            _selectedRateCommandMode = Properties.Settings.Default.RateCommandMode == "UniqLegacy"
-                ? UniqLegacyMode
-                : AppRatMode;
+            RateCommandModes = new ObservableCollection<string>
+            {
+                AppRatMode,
+                UniqLegacyMode,
+                AppRatWithUniqFallbackMode
+            };
+            _selectedRateCommandMode = Properties.Settings.Default.RateCommandMode switch
+            {
+                "UniqLegacy" => UniqLegacyMode,
+                "AppRatWithUniqFallback" => AppRatWithUniqFallbackMode,
+                _ => AppRatMode
+            };
             Sections = new ObservableCollection<Brush>();
             ShapefileFields = new ObservableCollection<string>();
 
@@ -836,9 +874,10 @@ namespace AOGBogballeBridge
                 {
                     status = $"Rate field '{SelectedShapefileField}' is missing or invalid; spreading disabled.";
                 }
-                else if (SelectedRateCommandMode == UniqLegacyMode && numericRate > 9999)
+                else if (SelectedRateCommandMode == UniqLegacyMode &&
+                         Math.Round(numericRate, MidpointRounding.AwayFromZero) > 99999)
                 {
-                    status = "UNIQ legacy rate command supports rates up to 9999 kg/ha.";
+                    status = "UNIQ legacy rate command supports rates up to 99999 kg/ha.";
                 }
                 else
                 {
@@ -860,10 +899,20 @@ namespace AOGBogballeBridge
             {
                 if (rateChanged || _lastSentApplicationRate == null)
                 {
-                    string rateCommand = SelectedRateCommandMode == UniqLegacyMode
-                        ? $"SD{int.Parse(rateText, NumberStyles.Integer, CultureInfo.InvariantCulture).ToString("D3", CultureInfo.InvariantCulture)}"
-                        : $"S:AppRat:{rateText}:";
-                    SendToSpreader(rateCommand);
+                    if (SelectedRateCommandMode == UniqLegacyMode)
+                    {
+                        SendToSpreader(BuildUniqLegacyRateCommand(rateText));
+                    }
+                    else if (SelectedRateCommandMode == AppRatWithUniqFallbackMode)
+                    {
+                        string? fallbackCommand = TryBuildUniqLegacyRateCommand(rateText);
+                        SendAppRatWithFallback(rateText, fallbackCommand);
+                    }
+                    else
+                    {
+                        SendToSpreader($"S:AppRat:{rateText}:");
+                    }
+
                     _lastSentApplicationRate = rateText;
                 }
             }
@@ -940,8 +989,18 @@ namespace AOGBogballeBridge
         {
             try
             {
-                _serial?.Close();
-                _serial = null;
+                _rateCommandAckTimer.Stop();
+                _pendingFallbackRate = null;
+                _pendingFallbackCommand = null;
+                lock (_serialReceiveLock)
+                    _serialReceiveBuffer = string.Empty;
+                if (_serial != null)
+                {
+                    _serial.DataReceived -= Serial_DataReceived;
+                    _serial.Close();
+                    _serial.Dispose();
+                    _serial = null;
+                }
 
                 if (IsSimulatorMode)
                 {
@@ -964,6 +1023,7 @@ namespace AOGBogballeBridge
                 // Write timeout stops a stalled adapter from freezing the UI thread
                 _serial = new SerialPort(SelectedPort, 9600) { WriteTimeout = 500 };
                 _serial.Open();
+                _serial.DataReceived += Serial_DataReceived;
                 SerialConnected = true;
                 _lastSentApplicationRate = null;
 
@@ -978,23 +1038,23 @@ namespace AOGBogballeBridge
             }
         }
 
-        private void SendToSpreader(string message)
+        private bool SendToSpreader(string message)
         {
             if (IsSimulatorMode)
             {
                 if (_lastUdp == default || (DateTime.Now - _lastUdp).TotalSeconds >= 1.5)
-                    return;
+                    return false;
 
                 string checksum = CalculateAsciiChecksum(message);
                 string fullMessage = $"{{{message}{checksum}}}";
                 _simulatorOutput = FormatCommandForDisplay(message, fullMessage);
                 OnPropertyChanged(nameof(SimulatorStatus));
                 Debug.WriteLine($"Simulator received: {_simulatorOutput}");
-                return;
+                return true;
             }
 
             if (!SerialConnected || _serial == null)
-                return;
+                return false;
 
             try
             {
@@ -1009,17 +1069,169 @@ namespace AOGBogballeBridge
                 if (IsApplicationRateCommand(message))
                     LastApplicationRateCommand = FormatCommandForDisplay(message, fullMessage);
                 Debug.WriteLine($"Sent: {FormatCommandForDisplay(message, fullMessage)}");
+                return true;
             }
             catch (Exception ex)
             {
                 SerialConnected = false;
                 Debug.WriteLine($"ERROR sending '{message}': {ex.Message}");
+                return false;
             }
+        }
+
+        private void SendAppRatWithFallback(string rate, string? fallbackCommand)
+        {
+            _rateCommandAckTimer.Stop();
+            _pendingFallbackRate = fallbackCommand == null ? null : rate;
+            _pendingFallbackCommand = fallbackCommand;
+            bool appRatSent = SendToSpreader($"S:AppRat:{rate}:");
+            if (!appRatSent)
+            {
+                _pendingFallbackRate = null;
+                _pendingFallbackCommand = null;
+                RateProtocolStatus = "AppRat was not written; legacy fallback was not attempted.";
+                return;
+            }
+
+            if (fallbackCommand != null && (IsSimulatorMode || SerialConnected))
+            {
+                // Give AppRat time to receive a reply instead of immediately sending a duplicate legacy rate.
+                RateProtocolStatus = IsSimulatorMode
+                    ? "Simulator recorded AppRat; waiting for a real calibrator acknowledgement (none is simulated)."
+                    : "AppRat sent; waiting up to 1 second for its acknowledgement.";
+                _rateCommandAckTimer.Start();
+            }
+            else if (fallbackCommand == null)
+            {
+                RateProtocolStatus = "AppRat sent; no legacy fallback is available above 99999 kg/ha.";
+            }
+        }
+
+        private void RateCommandAckTimer_Tick(object? sender, EventArgs e)
+        {
+            _rateCommandAckTimer.Stop();
+            string? fallbackCommand = _pendingFallbackCommand;
+            _pendingFallbackCommand = null;
+            _pendingFallbackRate = null;
+
+            if (fallbackCommand != null && (IsSimulatorMode || SerialConnected))
+            {
+                bool fallbackWritten = SendToSpreader(fallbackCommand);
+                RateProtocolStatus = IsSimulatorMode
+                    ? "No real calibrator acknowledgement; simulator recorded the UNIQ legacy fallback."
+                    : fallbackWritten
+                        ? "No matching AppRat acknowledgement; sent the UNIQ legacy fallback."
+                        : "No matching AppRat acknowledgement; legacy fallback could not be written.";
+            }
+        }
+
+        private void Serial_DataReceived(object? sender, SerialDataReceivedEventArgs e)
+        {
+            if (sender is not SerialPort serial)
+                return;
+
+            try
+            {
+                int availableBytes = serial.BytesToRead;
+                if (availableBytes == 0)
+                    return;
+
+                byte[] bytes = new byte[availableBytes];
+                int bytesRead = serial.Read(bytes, 0, bytes.Length);
+                if (bytesRead == 0)
+                    return;
+
+                string incoming = Encoding.Latin1.GetString(bytes, 0, bytesRead);
+                List<string> frames = new();
+                lock (_serialReceiveLock)
+                {
+                    _serialReceiveBuffer += incoming;
+                    while (true)
+                    {
+                        int start = _serialReceiveBuffer.IndexOf('{');
+                        if (start < 0)
+                        {
+                            _serialReceiveBuffer = string.Empty;
+                            break;
+                        }
+
+                        if (start > 0)
+                            _serialReceiveBuffer = _serialReceiveBuffer[start..];
+
+                        int end = _serialReceiveBuffer.IndexOf('}', 1);
+                        if (end < 0)
+                            break;
+
+                        frames.Add(_serialReceiveBuffer[..(end + 1)]);
+                        _serialReceiveBuffer = _serialReceiveBuffer[(end + 1)..];
+                    }
+                }
+
+                if (frames.Count > 0)
+                    _dispatcher.BeginInvoke(new Action(() => ProcessSerialFrames(frames)));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ERROR reading Bogballe serial response: {ex.Message}");
+            }
+        }
+
+        private void ProcessSerialFrames(IEnumerable<string> frames)
+        {
+            foreach (string frame in frames)
+            {
+                if (frame.Length < 4)
+                    continue;
+
+                // Bogballe XORs the payload bytes, excluding the opening brace, checksum, and closing brace.
+                string payload = frame[1..^2];
+                if (CalculateAsciiChecksum(payload)[0] != frame[^2])
+                {
+                    Debug.WriteLine("Ignored Bogballe response with an invalid checksum.");
+                    continue;
+                }
+
+                string[] fields = payload.Split(':');
+                if (fields.Length < 4 || fields[0] != "A" || fields[1] != "AppRat" ||
+                    !double.TryParse(fields[2], NumberStyles.Float, CultureInfo.InvariantCulture, out double acknowledgedRate) ||
+                    _pendingFallbackRate == null ||
+                    !double.TryParse(_pendingFallbackRate, NumberStyles.Float, CultureInfo.InvariantCulture, out double pendingRate) ||
+                    Math.Abs(acknowledgedRate - pendingRate) > 0.005)
+                    continue;
+
+                _rateCommandAckTimer.Stop();
+                _pendingFallbackRate = null;
+                _pendingFallbackCommand = null;
+                RateProtocolStatus = $"Bogballe acknowledged AppRat {fields[2]}; legacy fallback cancelled.";
+                Debug.WriteLine(RateProtocolStatus);
+            }
+        }
+
+        private static string BuildUniqLegacyRateCommand(string rateText) =>
+            TryBuildUniqLegacyRateCommand(rateText)
+            ?? throw new ArgumentOutOfRangeException(nameof(rateText), "UNIQ legacy rates must be between 0 and 99999 kg/ha.");
+
+        private static string? TryBuildUniqLegacyRateCommand(string rateText)
+        {
+            // UNIQ legacy uses SD for up to four digits and lowercase sD for five-digit rates.
+            if (!double.TryParse(rateText, NumberStyles.Float, CultureInfo.InvariantCulture, out double numericRate) ||
+                !double.IsFinite(numericRate))
+                return null;
+
+            double roundedRate = Math.Round(numericRate, MidpointRounding.AwayFromZero);
+            if (roundedRate is < 0 or > 99999)
+                return null;
+
+            int rate = (int)roundedRate;
+            return rate <= 9999
+                ? $"SD{rate.ToString("D3", CultureInfo.InvariantCulture)}"
+                : $"sD{rate.ToString("D5", CultureInfo.InvariantCulture)}";
         }
 
         private static bool IsApplicationRateCommand(string message) =>
             message.StartsWith("S:AppRat:", StringComparison.Ordinal) ||
-            message.StartsWith("SD", StringComparison.Ordinal);
+            message.StartsWith("SD", StringComparison.Ordinal) ||
+            message.StartsWith("sD", StringComparison.Ordinal);
 
         private static string FormatCommandForDisplay(string message, string fullMessage)
         {
@@ -1089,7 +1301,7 @@ namespace AOGBogballeBridge
             Debug.WriteLine($"Total spread width: {{S:SprdWt:{totalWidth.ToString("F1", CultureInfo.InvariantCulture)}}} (not transmitted)");
         }
 
-        private string CalculateAsciiChecksum(string data)
+        private static string CalculateAsciiChecksum(string data)
         {
             byte cs = 0;
             foreach (char c in data)
