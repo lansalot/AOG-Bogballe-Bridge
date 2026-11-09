@@ -16,14 +16,14 @@ You will need a USB -> RS232 adapter and null modem cable to connect to the port
 
 The simulator option waits for live AgOpenGPS UDP traffic on port `8888`, processes it through the same bridge logic, and shows the virtual calibrator's latest received command. It does not generate mock data or send anything to a serial port. Its blue status light distinguishes it from a physical COM connection.
 
-Application rates always use AppRat first. The Bridge waits up to one second for a checksum-valid acknowledgement with the requested value, then sends the matching UNIQ legacy command only if no acknowledgement arrives. Legacy rates through 9999 use `SD` with at least three digits; rates from 10000 through 99999 use `sD` with five digits, as specified by the protocol. Values above 99999 kg/ha cannot use the legacy fallback. This fixed fallback behavior is intended for UNIQ calibrators: any device that does not acknowledge AppRat will receive the legacy command. When connected to a physical calibrator, the Bridge also polls the documented `rDC` and `rAC` read commands for its set and present application rates; these readbacks are not simulated.
+This fixed fallback behavior is intended for UNIQ calibrators: any device that does not acknowledge AppRat will receive the legacy command. When connected to a physical calibrator, the Bridge polls the documented `rDC` command to display its set application rate; this readback is not simulated.
 
 Note that the Bridge will only accept machine configurations with 2, 4 or 8 sections.
 
 The window shows:
 
 - **UDP** status light - green when data is arriving from AgIO; the output light is green for an open COM port and blue for the virtual simulator
-- Live speed, width, shapefile target rate, and the set and present application rates read back from the Bogballe calibrator
+- Live speed, width, shapefile target rate, and the set application rate read back from the Bogballe calibrator
 - The machine configuration received from AgOpenGPS
 - The on/off state of each section
 

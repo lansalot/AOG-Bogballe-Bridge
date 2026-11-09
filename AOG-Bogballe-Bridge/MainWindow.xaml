@@ -73,7 +73,6 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <Border Grid.Row="0" Grid.Column="0" BorderBrush="LightSteelBlue" BorderThickness="1"
                             Background="#EEF5FB" CornerRadius="4" Padding="8,4" Margin="0,0,4,4">
@@ -116,18 +115,6 @@
                                            ToolTip="Application rate reported by the Bogballe calibrator."/>
                             </StackPanel>
                             <TextBlock Text="{Binding LegacyRateFallbackNote}" FontSize="10" Foreground="DimGray"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                            BorderBrush="LightSteelBlue" BorderThickness="1" Background="#EEF5FB"
-                            CornerRadius="4" Padding="8,4" Margin="0,4,0,0">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="Present value" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"
-                                       ToolTip="Present application rate reported by the Bogballe calibrator."/>
-                            <TextBlock Text="{Binding CalibratorPresentRateDisplay}"
-                                       FontWeight="Bold" FontSize="18" Foreground="DarkSlateBlue"
-                                       Margin="8,0,0,0" VerticalAlignment="Center"
-                                       ToolTip="Present application rate reported by the Bogballe calibrator."/>
                         </StackPanel>
                     </Border>
                 </Grid>

@@ -51,9 +51,7 @@ namespace AOGBogballeBridge
         private double _speed;
         private double _width;
         private string _calibratorSetRateDisplay = "—";
-        private string _calibratorPresentRateDisplay = "—";
         private bool _legacyRateFallbackUsed;
-        private bool _readSetRateNext = true;
         private bool _udpConnected;
         private bool _serialConnected;
         private DateTime _lastUdp;
@@ -290,16 +288,6 @@ namespace AOGBogballeBridge
             }
         }
 
-        public string CalibratorPresentRateDisplay
-        {
-            get => _calibratorPresentRateDisplay;
-            private set
-            {
-                _calibratorPresentRateDisplay = value;
-                OnPropertyChanged(nameof(CalibratorPresentRateDisplay));
-            }
-        }
-
         public string LegacyRateFallbackNote => _legacyRateFallbackUsed ? "UNIQ legacy used" : string.Empty;
 
         public double Width
@@ -336,7 +324,6 @@ namespace AOGBogballeBridge
                 {
                     _rateReadbackTimer.Stop();
                     CalibratorSetRateDisplay = "—";
-                    CalibratorPresentRateDisplay = "—";
                     SetLegacyRateFallbackUsed(false);
                 }
             }
@@ -1070,9 +1057,7 @@ namespace AOGBogballeBridge
             if (!SerialConnected || _serial == null || _rateCommandAckTimer.IsEnabled)
                 return;
 
-            string request = _readSetRateNext ? "rDC" : "rAC";
-            _readSetRateNext = !_readSetRateNext;
-            SendToSpreader(request);
+            SendToSpreader("rDC");
         }
 
         private void Serial_DataReceived(object? sender, SerialDataReceivedEventArgs e)
@@ -1173,8 +1158,6 @@ namespace AOGBogballeBridge
             string command = payload[..2];
             if (command is "WD" or "wD" or "AD" or "aD")
                 CalibratorSetRateDisplay = FormatCalibratorRate(reportedRate);
-            else if (command is "WA" or "wA")
-                CalibratorPresentRateDisplay = FormatCalibratorRate(reportedRate);
             else
                 return false;
 
@@ -1190,8 +1173,6 @@ namespace AOGBogballeBridge
         private void ResetCalibratorRateReadbacks()
         {
             CalibratorSetRateDisplay = "—";
-            CalibratorPresentRateDisplay = "—";
-            _readSetRateNext = true;
             SetLegacyRateFallbackUsed(false);
         }
 
