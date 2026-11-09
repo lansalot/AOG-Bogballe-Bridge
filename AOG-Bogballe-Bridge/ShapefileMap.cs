@@ -159,6 +159,68 @@ namespace AOGBogballeBridge
                 if (new Rect(RenderSize).Contains(location))
                     drawingContext.DrawEllipse(Brushes.Red, new Pen(Brushes.White, 2), location, 7, 7);
             }
+
+            if (ValueField != null && values is { Length: > 0 })
+                DrawLegend(drawingContext, minValue, maxValue);
+        }
+
+        private void DrawLegend(DrawingContext drawingContext, double minValue, double maxValue)
+        {
+            const double height = 58;
+            double width = Math.Min(220, ActualWidth - 24);
+            if (width <= 0)
+                return;
+
+            double left = ActualWidth - width - 12;
+            const double top = 12;
+            Rect background = new(left, top, width, height);
+            drawingContext.DrawRoundedRectangle(
+                new SolidColorBrush(Color.FromArgb(235, 255, 255, 255)),
+                new Pen(Brushes.SlateGray, 1),
+                background,
+                4,
+                4);
+
+            double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+            FormattedText fieldLabel = new(
+                $"DBF field: {ValueField}",
+                CultureInfo.InvariantCulture,
+                FlowDirection.LeftToRight,
+                new Typeface("Segoe UI"),
+                12,
+                Brushes.Black,
+                pixelsPerDip)
+            {
+                MaxTextWidth = width - 16,
+                Trimming = TextTrimming.CharacterEllipsis
+            };
+            drawingContext.DrawText(fieldLabel, new Point(left + 8, top + 5));
+
+            Rect colorRange = new(left + 8, top + 26, width - 16, 12);
+            LinearGradientBrush gradient = new(
+                Color.FromRgb(45, 125, 225),
+                Color.FromRgb(240, 70, 45),
+                0);
+            drawingContext.DrawRectangle(gradient, null, colorRange);
+
+            FormattedText minimum = new(
+                minValue.ToString("G6", CultureInfo.InvariantCulture),
+                CultureInfo.InvariantCulture,
+                FlowDirection.LeftToRight,
+                new Typeface("Segoe UI"),
+                10,
+                Brushes.Black,
+                pixelsPerDip);
+            FormattedText maximum = new(
+                maxValue.ToString("G6", CultureInfo.InvariantCulture),
+                CultureInfo.InvariantCulture,
+                FlowDirection.LeftToRight,
+                new Typeface("Segoe UI"),
+                10,
+                Brushes.Black,
+                pixelsPerDip);
+            drawingContext.DrawText(minimum, new Point(left + 8, top + 40));
+            drawingContext.DrawText(maximum, new Point(left + width - 8 - maximum.Width, top + 40));
         }
 
         private Brush GetFillBrush(ShapefileFeature feature, double minValue, double maxValue)

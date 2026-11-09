@@ -11,15 +11,19 @@ You will need a USB -> RS232 adapter and null modem cable to connect to the port
 
 1. Download the latest `AOG-Bogballe-Bridge-vX.X.X-win-x64.zip` from the [Releases](https://github.com/charlesquick/AOG-Bogballe-Bridge/releases) page and extract it anywhere. There is nothing to install and .NET is bundled, so Python is no longer needed.
 2. Run `AOG-Bogballe-Bridge.exe`. Windows Firewall may ask you to allow it the first time it runs - allow it, as the Bridge listens for UDP on port `8888`.
-3. Select your COM port from the drop-down. Press **Refresh** if you plug the adapter in after starting the Bridge.
+3. Select your COM port from the drop-down. Press **Refresh** if you plug the adapter in after starting the Bridge. To run without a spreader connected, select **AOG Simulator (UDP)** instead.
 4. Load your vehicle in AgOpenGPS. The width and section settings are sent automatically over the network to the Bridge and saved.
 
-Note that the Bridge will only accept machine configurations with 2, 4 or 8 sections. You will see a warning popup if your machine is not supported.
+The simulator option waits for live AgOpenGPS UDP traffic on port `8888`, processes it through the same bridge logic, and shows the virtual calibrator's latest received command. It does not generate mock data or send anything to a serial port. Its blue status light distinguishes it from a physical COM connection.
+
+This fixed fallback behavior is intended for UNIQ calibrators: any device that does not acknowledge AppRat will receive the legacy command. When connected to a physical calibrator, the Bridge polls the documented `rDC` command to display its set application rate; this readback is not simulated.
+
+Note that the Bridge will only accept machine configurations with 2, 4 or 8 sections.
 
 The window shows:
 
-- **UDP** and **Serial** status lights - green when data is arriving from AgIO and the COM port is open
-- Live speed, rate and width, and the last PGN received
+- **UDP** status light - green when data is arriving from AgIO; the output light is green for an open COM port and blue for the virtual simulator
+- Live speed, width, shapefile target rate, and the set application rate read back from the Bogballe calibrator
 - The machine configuration received from AgOpenGPS
 - The on/off state of each section
 
