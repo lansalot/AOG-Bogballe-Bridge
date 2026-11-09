@@ -20,6 +20,8 @@ namespace AOGBogballeBridge
 {
     public class MainViewModel : INotifyPropertyChanged
     {
+        private const string SimulatorPort = "AOG Simulator (UDP)";
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         public ObservableCollection<string> AvailablePorts { get; }
@@ -55,6 +57,7 @@ namespace AOGBogballeBridge
         private byte _currentSectionMask;
         private string _lastPgn = "";
         private string _configText = "";
+        private string _simulatorOutput = "No Bogballe command received yet.";
 
         // Machine configuration received from AgOpenGPS (PGN 0xEB)
         private int _secNum;
@@ -234,13 +237,28 @@ namespace AOGBogballeBridge
             get => _selectedPort;
             set
             {
+                if (string.Equals(_selectedPort, value, StringComparison.Ordinal))
+                    return;
+
                 _selectedPort = value;
                 Properties.Settings.Default.ComPort = value;
                 Properties.Settings.Default.Save();
-                ConnectSerial();
                 OnPropertyChanged(nameof(SelectedPort));
+                OnPropertyChanged(nameof(IsSimulatorMode));
+                OnPropertyChanged(nameof(ConnectionOutputLabel));
+                OnPropertyChanged(nameof(SerialBrush));
+                OnPropertyChanged(nameof(SimulatorStatus));
+                ConnectSerial();
             }
         }
+
+        public bool IsSimulatorMode => string.Equals(SelectedPort, SimulatorPort, StringComparison.Ordinal);
+
+        public string ConnectionOutputLabel => IsSimulatorMode ? "Simulator:" : "Serial:";
+
+        public string SimulatorStatus => UdpConnected
+            ? $"Live AOG traffic; virtual calibrator command: {_simulatorOutput}"
+            : "Waiting for live AOG UDP traffic on port 8888.";
 
         public double Speed
         {
@@ -280,6 +298,7 @@ namespace AOGBogballeBridge
                 _udpConnected = value;
                 OnPropertyChanged(nameof(UdpConnected));
                 OnPropertyChanged(nameof(UdpBrush));
+                OnPropertyChanged(nameof(SimulatorStatus));
             }
         }
 
@@ -315,13 +334,17 @@ namespace AOGBogballeBridge
         }
 
         public Brush UdpBrush => UdpConnected ? Brushes.LimeGreen : Brushes.Red;
-        public Brush SerialBrush => SerialConnected ? Brushes.LimeGreen : Brushes.Red;
+        public Brush SerialBrush => IsSimulatorMode
+            ? Brushes.DodgerBlue
+            : SerialConnected ? Brushes.LimeGreen : Brushes.Red;
 
         public MainViewModel()
         {
             _dispatcher = Application.Current.Dispatcher;
 
-            AvailablePorts = new ObservableCollection<string>(SerialPort.GetPortNames());
+            AvailablePorts = new ObservableCollection<string> { SimulatorPort };
+            foreach (string port in SerialPort.GetPortNames())
+                AvailablePorts.Add(port);
             Sections = new ObservableCollection<Brush>();
             ShapefileFields = new ObservableCollection<string>();
 
@@ -411,6 +434,7 @@ namespace AOGBogballeBridge
             string? currentPort = SelectedPort;
 
             AvailablePorts.Clear();
+            AvailablePorts.Add(SimulatorPort);
 
             foreach (string port in SerialPort.GetPortNames())
             {
@@ -860,6 +884,19 @@ namespace AOGBogballeBridge
             try
             {
                 _serial?.Close();
+                _serial = null;
+
+                if (IsSimulatorMode)
+                {
+                    SerialConnected = false;
+                    _simulatorOutput = "No Bogballe command received yet.";
+                    OnPropertyChanged(nameof(SimulatorStatus));
+                    _lastSentApplicationRate = null;
+                    _activeSectionsLast = -1;
+                    _spreaderEnabledLast = !_rateZoneValid;
+                    UpdateApplicationRate();
+                    return;
+                }
 
                 if (string.IsNullOrWhiteSpace(SelectedPort))
                 {
@@ -886,6 +923,19 @@ namespace AOGBogballeBridge
 
         private void SendToSpreader(string message)
         {
+            if (IsSimulatorMode)
+            {
+                if (_lastUdp == default || (DateTime.Now - _lastUdp).TotalSeconds >= 1.5)
+                    return;
+
+                string checksum = CalculateAsciiChecksum(message);
+                string fullMessage = $"{{{message}{checksum}}}";
+                _simulatorOutput = fullMessage;
+                OnPropertyChanged(nameof(SimulatorStatus));
+                Debug.WriteLine($"Simulator received: {fullMessage}");
+                return;
+            }
+
             if (!SerialConnected || _serial == null)
                 return;
 
