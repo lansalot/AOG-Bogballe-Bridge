@@ -49,8 +49,11 @@ namespace AOGBogballeBridge
 
         private string? _selectedPort;
         private double _speed;
-        private double _rate;
         private double _width;
+        private string _calibratorSetRateDisplay = "—";
+        private string _calibratorPresentRateDisplay = "—";
+        private bool _legacyRateFallbackUsed;
+        private bool _readSetRateNext = true;
         private bool _udpConnected;
         private bool _serialConnected;
         private DateTime _lastUdp;
@@ -77,6 +80,7 @@ namespace AOGBogballeBridge
         private SerialPort? _serial;
         private readonly DispatcherTimer _statusTimer;
         private readonly DispatcherTimer _rateCommandAckTimer;
+        private readonly DispatcherTimer _rateReadbackTimer;
         private readonly Dispatcher _dispatcher;
 
         public ICommand RefreshPortsCommand { get; }
@@ -276,15 +280,27 @@ namespace AOGBogballeBridge
             }
         }
 
-        public double Rate
+        public string CalibratorSetRateDisplay
         {
-            get => _rate;
-            set
+            get => _calibratorSetRateDisplay;
+            private set
             {
-                _rate = value;
-                OnPropertyChanged(nameof(Rate));
+                _calibratorSetRateDisplay = value;
+                OnPropertyChanged(nameof(CalibratorSetRateDisplay));
             }
         }
+
+        public string CalibratorPresentRateDisplay
+        {
+            get => _calibratorPresentRateDisplay;
+            private set
+            {
+                _calibratorPresentRateDisplay = value;
+                OnPropertyChanged(nameof(CalibratorPresentRateDisplay));
+            }
+        }
+
+        public string LegacyRateFallbackNote => _legacyRateFallbackUsed ? "UNIQ legacy used" : string.Empty;
 
         public double Width
         {
@@ -316,6 +332,13 @@ namespace AOGBogballeBridge
                 _serialConnected = value;
                 OnPropertyChanged(nameof(SerialConnected));
                 OnPropertyChanged(nameof(SerialBrush));
+                if (!value)
+                {
+                    _rateReadbackTimer.Stop();
+                    CalibratorSetRateDisplay = "—";
+                    CalibratorPresentRateDisplay = "—";
+                    SetLegacyRateFallbackUsed(false);
+                }
             }
         }
 
@@ -362,6 +385,11 @@ namespace AOGBogballeBridge
                 Interval = TimeSpan.FromSeconds(1)
             };
             _rateCommandAckTimer.Tick += RateCommandAckTimer_Tick;
+            _rateReadbackTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _rateReadbackTimer.Tick += RateReadbackTimer_Tick;
 
             AvailablePorts = new ObservableCollection<string> { SimulatorPort };
             foreach (string port in SerialPort.GetPortNames())
@@ -374,7 +402,6 @@ namespace AOGBogballeBridge
 
             // Initialize display values
             Speed = 0;
-            Rate = 0;
             Width = 0;
             _currentSectionMask = 0;
             _activeSectionsLast = 0;
@@ -724,14 +751,11 @@ namespace AOGBogballeBridge
                         MessageBoxImage.Warning);
                 }
             }
-            // Rate + width
+            // Width PGN
             else if (pgn == 0xE7)
             {
                 if (data.Length < 9)
                     return;
-
-                ushort rateRaw = BitConverter.ToUInt16(data, 5);
-                Rate = rateRaw * 0.01;
 
                 ushort widthRaw = BitConverter.ToUInt16(data, 7);
                 Width = Math.Round(widthRaw * 0.01, 1);
@@ -907,8 +931,10 @@ namespace AOGBogballeBridge
             try
             {
                 _rateCommandAckTimer.Stop();
+                _rateReadbackTimer.Stop();
                 _pendingFallbackRate = null;
                 _pendingFallbackCommand = null;
+                ResetCalibratorRateReadbacks();
                 lock (_serialReceiveLock)
                     _serialReceiveBuffer = string.Empty;
                 if (_serial != null)
@@ -942,6 +968,7 @@ namespace AOGBogballeBridge
                 _serial.Open();
                 _serial.DataReceived += Serial_DataReceived;
                 SerialConnected = true;
+                _rateReadbackTimer.Start();
                 _lastSentApplicationRate = null;
 
                 // Force enable/width to be resent to the (re)connected spreader
@@ -993,6 +1020,7 @@ namespace AOGBogballeBridge
         private void SendAppRatWithFallback(string rate, string? fallbackCommand)
         {
             _rateCommandAckTimer.Stop();
+            SetLegacyRateFallbackUsed(false);
             _pendingFallbackRate = fallbackCommand == null ? null : rate;
             _pendingFallbackCommand = fallbackCommand;
             bool appRatSent = SendToSpreader($"S:AppRat:{rate}:");
@@ -1028,12 +1056,23 @@ namespace AOGBogballeBridge
             if (fallbackCommand != null && (IsSimulatorMode || SerialConnected))
             {
                 bool fallbackWritten = SendToSpreader(fallbackCommand);
+                SetLegacyRateFallbackUsed(fallbackWritten && !IsSimulatorMode);
                 RateProtocolStatus = IsSimulatorMode
                     ? "Simulator recorded the UNIQ legacy fallback; no calibrator response is simulated."
                     : fallbackWritten
                         ? "UNIQ legacy fallback used."
                         : "UNIQ legacy fallback could not be sent.";
             }
+        }
+
+        private void RateReadbackTimer_Tick(object? sender, EventArgs e)
+        {
+            if (!SerialConnected || _serial == null || _rateCommandAckTimer.IsEnabled)
+                return;
+
+            string request = _readSetRateNext ? "rDC" : "rAC";
+            _readSetRateNext = !_readSetRateNext;
+            SendToSpreader(request);
         }
 
         private void Serial_DataReceived(object? sender, SerialDataReceivedEventArgs e)
@@ -1102,10 +1141,17 @@ namespace AOGBogballeBridge
                     continue;
                 }
 
+                if (TryProcessLegacyRateResponse(payload))
+                    continue;
+
                 string[] fields = payload.Split(':');
                 if (fields.Length < 4 || fields[0] != "A" || fields[1] != "AppRat" ||
                     !double.TryParse(fields[2], NumberStyles.Float, CultureInfo.InvariantCulture, out double acknowledgedRate) ||
-                    _pendingFallbackRate == null ||
+                    !double.IsFinite(acknowledgedRate))
+                    continue;
+
+                CalibratorSetRateDisplay = FormatCalibratorRate(acknowledgedRate);
+                if (_pendingFallbackRate == null ||
                     !double.TryParse(_pendingFallbackRate, NumberStyles.Float, CultureInfo.InvariantCulture, out double pendingRate) ||
                     Math.Abs(acknowledgedRate - pendingRate) > 0.005)
                     continue;
@@ -1113,9 +1159,53 @@ namespace AOGBogballeBridge
                 _rateCommandAckTimer.Stop();
                 _pendingFallbackRate = null;
                 _pendingFallbackCommand = null;
+                SetLegacyRateFallbackUsed(false);
                 RateProtocolStatus = $"Bogballe acknowledged {fields[2]} kg/ha; legacy fallback not used.";
             }
         }
+
+        private bool TryProcessLegacyRateResponse(string payload)
+        {
+            if (payload.Length < 3 ||
+                !double.TryParse(payload[2..], NumberStyles.None, CultureInfo.InvariantCulture, out double reportedRate))
+                return false;
+
+            string command = payload[..2];
+            if (command is "WD" or "wD" or "AD" or "aD")
+                CalibratorSetRateDisplay = FormatCalibratorRate(reportedRate);
+            else if (command is "WA" or "wA")
+                CalibratorPresentRateDisplay = FormatCalibratorRate(reportedRate);
+            else
+                return false;
+
+            if (command is "AD" or "aD")
+            {
+                SetLegacyRateFallbackUsed(true);
+                RateProtocolStatus = $"Calibrator set rate: {FormatCalibratorRate(reportedRate)} (UNIQ legacy).";
+            }
+
+            return true;
+        }
+
+        private void ResetCalibratorRateReadbacks()
+        {
+            CalibratorSetRateDisplay = "—";
+            CalibratorPresentRateDisplay = "—";
+            _readSetRateNext = true;
+            SetLegacyRateFallbackUsed(false);
+        }
+
+        private void SetLegacyRateFallbackUsed(bool used)
+        {
+            if (_legacyRateFallbackUsed == used)
+                return;
+
+            _legacyRateFallbackUsed = used;
+            OnPropertyChanged(nameof(LegacyRateFallbackNote));
+        }
+
+        private static string FormatCalibratorRate(double rate) =>
+            $"{rate.ToString("0.##", CultureInfo.InvariantCulture)} kg/ha";
 
         private static string? TryBuildUniqLegacyRateCommand(string rateText)
         {
