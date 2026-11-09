@@ -21,10 +21,13 @@ namespace AOGBogballeBridge
     public class MainViewModel : INotifyPropertyChanged
     {
         private const string SimulatorPort = "AOG Simulator (UDP)";
+        private const string AppRatMode = "AppRat (new format)";
+        private const string UniqLegacyMode = "UNIQ legacy (integer kg/ha)";
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
         public ObservableCollection<string> AvailablePorts { get; }
+        public ObservableCollection<string> RateCommandModes { get; }
         public ObservableCollection<Brush> Sections { get; }
         public ObservableCollection<string> ShapefileFields { get; }
 
@@ -48,6 +51,7 @@ namespace AOGBogballeBridge
         private bool _spreaderEnabledLast = true;
 
         private string? _selectedPort;
+        private string _selectedRateCommandMode = AppRatMode;
         private double _speed;
         private double _rate;
         private double _width;
@@ -58,6 +62,8 @@ namespace AOGBogballeBridge
         private string _lastPgn = "";
         private string _configText = "";
         private string _simulatorOutput = "No Bogballe command received yet.";
+        private string _lastSpreaderCommand = "No serial command written yet.";
+        private string _lastApplicationRateCommand = "No application-rate command written yet.";
 
         // Machine configuration received from AgOpenGPS (PGN 0xEB)
         private int _secNum;
@@ -252,6 +258,23 @@ namespace AOGBogballeBridge
             }
         }
 
+        public string SelectedRateCommandMode
+        {
+            get => _selectedRateCommandMode;
+            set
+            {
+                if (string.Equals(_selectedRateCommandMode, value, StringComparison.Ordinal))
+                    return;
+
+                _selectedRateCommandMode = value;
+                Properties.Settings.Default.RateCommandMode = value == UniqLegacyMode ? "UniqLegacy" : "AppRat";
+                Properties.Settings.Default.Save();
+                OnPropertyChanged(nameof(SelectedRateCommandMode));
+                _lastSentApplicationRate = null;
+                UpdateApplicationRate();
+            }
+        }
+
         public bool IsSimulatorMode => string.Equals(SelectedPort, SimulatorPort, StringComparison.Ordinal);
 
         public string ConnectionOutputLabel => IsSimulatorMode ? "Simulator:" : "Serial:";
@@ -333,6 +356,26 @@ namespace AOGBogballeBridge
             }
         }
 
+        public string LastSpreaderCommand
+        {
+            get => _lastSpreaderCommand;
+            private set
+            {
+                _lastSpreaderCommand = value;
+                OnPropertyChanged(nameof(LastSpreaderCommand));
+            }
+        }
+
+        public string LastApplicationRateCommand
+        {
+            get => _lastApplicationRateCommand;
+            private set
+            {
+                _lastApplicationRateCommand = value;
+                OnPropertyChanged(nameof(LastApplicationRateCommand));
+            }
+        }
+
         public Brush UdpBrush => UdpConnected ? Brushes.LimeGreen : Brushes.Red;
         public Brush SerialBrush => IsSimulatorMode
             ? Brushes.DodgerBlue
@@ -345,6 +388,10 @@ namespace AOGBogballeBridge
             AvailablePorts = new ObservableCollection<string> { SimulatorPort };
             foreach (string port in SerialPort.GetPortNames())
                 AvailablePorts.Add(port);
+            RateCommandModes = new ObservableCollection<string> { AppRatMode, UniqLegacyMode };
+            _selectedRateCommandMode = Properties.Settings.Default.RateCommandMode == "UniqLegacy"
+                ? UniqLegacyMode
+                : AppRatMode;
             Sections = new ObservableCollection<Brush>();
             ShapefileFields = new ObservableCollection<string>();
 
@@ -789,10 +836,17 @@ namespace AOGBogballeBridge
                 {
                     status = $"Rate field '{SelectedShapefileField}' is missing or invalid; spreading disabled.";
                 }
+                else if (SelectedRateCommandMode == UniqLegacyMode && numericRate > 9999)
+                {
+                    status = "UNIQ legacy rate command supports rates up to 9999 kg/ha.";
+                }
                 else
                 {
-                    rateText = candidate.Trim();
-                    status = $"Inside rate polygon; application rate {rateText}.";
+                    rateText = SelectedRateCommandMode == UniqLegacyMode
+                        ? Math.Round(numericRate, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture)
+                        : Math.Round(numericRate, 2, MidpointRounding.AwayFromZero)
+                            .ToString("0.##", CultureInfo.InvariantCulture);
+                    status = $"Inside rate polygon; application rate {rateText} kg/ha.";
                 }
             }
 
@@ -802,11 +856,14 @@ namespace AOGBogballeBridge
             CurrentApplicationRate = rateText ?? status;
             GpsStatus = status;
 
-            if (rateValid)
+            if (rateText is not null)
             {
                 if (rateChanged || _lastSentApplicationRate == null)
                 {
-                    SendToSpreader($"S:AppRat:{rateText}:C");
+                    string rateCommand = SelectedRateCommandMode == UniqLegacyMode
+                        ? $"SD{int.Parse(rateText, NumberStyles.Integer, CultureInfo.InvariantCulture).ToString("D3", CultureInfo.InvariantCulture)}"
+                        : $"S:AppRat:{rateText}:";
+                    SendToSpreader(rateCommand);
                     _lastSentApplicationRate = rateText;
                 }
             }
@@ -930,9 +987,9 @@ namespace AOGBogballeBridge
 
                 string checksum = CalculateAsciiChecksum(message);
                 string fullMessage = $"{{{message}{checksum}}}";
-                _simulatorOutput = fullMessage;
+                _simulatorOutput = FormatCommandForDisplay(message, fullMessage);
                 OnPropertyChanged(nameof(SimulatorStatus));
-                Debug.WriteLine($"Simulator received: {fullMessage}");
+                Debug.WriteLine($"Simulator received: {_simulatorOutput}");
                 return;
             }
 
@@ -948,13 +1005,26 @@ namespace AOGBogballeBridge
                 byte[] msg = Encoding.ASCII.GetBytes(fullMessage);
                 _serial.Write(msg, 0, msg.Length);
 
-                Debug.WriteLine($"Sent: {fullMessage}");
+                LastSpreaderCommand = FormatCommandForDisplay(message, fullMessage);
+                if (IsApplicationRateCommand(message))
+                    LastApplicationRateCommand = FormatCommandForDisplay(message, fullMessage);
+                Debug.WriteLine($"Sent: {FormatCommandForDisplay(message, fullMessage)}");
             }
             catch (Exception ex)
             {
                 SerialConnected = false;
                 Debug.WriteLine($"ERROR sending '{message}': {ex.Message}");
             }
+        }
+
+        private static bool IsApplicationRateCommand(string message) =>
+            message.StartsWith("S:AppRat:", StringComparison.Ordinal) ||
+            message.StartsWith("SD", StringComparison.Ordinal);
+
+        private static string FormatCommandForDisplay(string message, string fullMessage)
+        {
+            byte checksum = (byte)fullMessage[fullMessage.Length - 2];
+            return $"{{{message}<checksum 0x{checksum:X2}>}}";
         }
 
         private void SendSpeed()

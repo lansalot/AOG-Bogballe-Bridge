@@ -16,7 +16,9 @@ You will need a USB -> RS232 adapter and null modem cable to connect to the port
 
 The simulator option waits for live AgOpenGPS UDP traffic on port `8888`, processes it through the same bridge logic, and shows the virtual calibrator's latest received command. It does not generate mock data or send anything to a serial port. Its blue status light distinguishes it from a physical COM connection.
 
-Note that the Bridge will only accept machine configurations with 2, 4 or 8 sections. You will see a warning popup if your machine is not supported.
+Choose the application-rate command format for the calibrator. **AppRat (new format)** sends the colon-separated command. **UNIQ legacy (integer kg/ha)** sends the fixed-width `SD` application-rate command documented for UNIQ; rates are rounded to the nearest whole kg/ha in this mode. The selection is saved automatically. The bridge cannot currently read calibrator replies, so it cannot automatically detect or fall back from an unsupported command.
+
+Note that the Bridge will only accept machine configurations with 2, 4 or 8 sections.
 
 The window shows:
 
